@@ -1,0 +1,416 @@
+﻿@model IEnumerable<EmployeeDetails.Models.Employee>
+
+@{
+    ViewData["Title"] = "Index";
+}
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js" />
+
+<!-- DARK MODE TOGGLE -->
+<div style="text-align: right; margin-bottom: 10px;">
+    <label class="switch">
+        <input type="checkbox" id="modeToggle">
+        <span class="slider round"></span>
+    </label>
+</div>
+
+<h1><i class="fas fa-users"></i> Employee Details</h1>
+
+
+
+<!-- EMAIL BUTTON -->
+<div style="margin-top: 20px; text-align: center;">
+    <button onclick="openMailModal()" class="btn btn-primary">📧 Send Email</button>
+</div>
+
+<!-- EMAIL MODAL -->
+<form method="post" id="mailForm" asp-controller="Employee" asp-action="SendEmail"></form>
+
+<div id="mailModal" style="display:none; position:fixed; top:20%; left:50%; transform:translate(-50%); background:white; padding:20px; z-index:999; border-radius:10px; box-shadow:0 0 15px rgba(0,0,0,0.3);">
+    <h4>Send Email</h4>
+    <form method="post" id="mailForm">
+        <label>Subject:</label><br />
+        <input type="text" name="subject" required class="form-control" /><br />
+        <label>Message:</label><br />
+        <textarea name="message" rows="4" required class="form-control"></textarea><br />
+        <select name="sendOption" onchange="toggleDropdown(this.value)" class="form-control">
+            <option value="all">All Employees</option>
+            <option value="individual">Individual Employee</option>
+            <option value="department">By Department</option>
+        </select><br />
+
+        <!-- For Individual -->
+        <select name="employeeId" id="employeeSelect" style="display:none;" class="form-control">
+            @foreach (var emp in Model)
+            {
+                <option value="@emp.Id">@emp.Name (@emp.Email)</option>
+            }
+         </select> 
+
+
+
+
+        <!-- For Department -->
+        <select name="departmentName" id="departmentSelect" style="display:none;" class="form-control">
+            @foreach (var dept in Model.Select(m => m.Department.Name).Distinct())
+            {
+                <option value="@dept">@dept</option>
+            }
+        </select><br />
+
+        <button type="submit" class="btn btn-success">Send</button>
+        <button type="button" onclick="closeMailModal()" class="btn btn-danger">Cancel</button>
+    </form>
+</div>
+<div id="mailOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:998;" onclick="closeMailModal()"></div>
+
+
+
+<!-- CREATE, SEARCH & DOWNLOAD IN ONE ROW -->
+<div style="display: flex; justify-content: space-between; align-items: center; margin: 20px 0;">
+    <!-- CREATE NEW BUTTON - LEFT -->
+    <div>
+        <a asp-action="Create"><i class="fas fa-user-plus"></i> Create New</a>
+    </div>
+
+    <!-- SEARCH BAR - CENTER -->
+    <div style="flex-grow: 1; text-align: center;">
+        <input type="text" id="searchInput" placeholder="Search by Name, ID, or Department..." style="padding: 8px; width: 300px; border-radius: 5px; border: 1px solid #ccc;">
+    </div>
+
+    <!-- DOWNLOAD BUTTON - RIGHT -->
+    <div>
+        <button onclick="showDownloadOptions()" style="padding: 8px 16px; background-color: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer;">
+            ⬇️ Download
+        </button>
+    </div>
+</div>
+
+
+<!-- DOWNLOAD MODAL -->
+<div id="downloadModal" style="display:none; position:fixed; top:30%; left:50%; transform:translate(-50%, -50%); background:white; padding:20px; box-shadow:0 0 15px rgba(0,0,0,0.3); border-radius:10px; z-index:999;">
+    <h3>Select format:</h3>
+    <button onclick="downloadCSV()" style="margin:5px;">CSV</button>
+    <button onclick="downloadExcel()" style="margin:5px;">Excel</button>
+    <button onclick="downloadPDF()" style="margin:5px;">PDF</button>
+    <br><br>
+    <button onclick="closeDownloadOptions()" style="color:red;">Close</button>
+</div>
+<div id="modalOverlay" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background-color:rgba(0,0,0,0.5); z-index:998;" onclick="closeDownloadOptions()"></div>
+
+
+
+<div class="table-wrapper">
+    <div class="table-scroll">
+        <table class="table" id="employeeTable">
+            <thead>
+                <tr>
+                    <th style="position: sticky; top: 0; background-color: #ff7e5f; color: white;">@Html.DisplayNameFor(model => model.First().Id)</th>
+                    <th style="position: sticky; top: 0; background-color: #ff7e5f; color: white;">@Html.DisplayNameFor(model => model.First().Name)</th>
+                    <th style="position: sticky; top: 0; background-color: #ff7e5f; color: white;">@Html.DisplayNameFor(model => model.First().Email)</th>
+                    <th style="position: sticky; top: 0; background-color: #ff7e5f; color: white;">@Html.DisplayNameFor(model => model.First().Department.Id)</th>
+                    <th style="position: sticky; top: 0; background-color: #ff7e5f; color: white;">@Html.DisplayNameFor(model => model.First().Department.Name)</th>
+                    <th style="position: sticky; top: 0; background-color: #ff7e5f; color: white;"><i class="fas fa-cogs"></i> Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td>@item.Id</td>
+                        <td>@item.Name</td>
+                        <td>@item.Email</td>
+                        <td>@item.Department.Id</td>
+                        <td>@item.Department.Name</td>
+                        <td>
+                            <a asp-action="Edit" asp-route-id="@item.Id"><i class="fas fa-edit"></i> Edit</a>
+                            <a asp-action="Details" asp-route-id="@item.Id"><i class="fas fa-info-circle"></i> Details</a>
+                            <a asp-action="Delete" asp-route-id="@item.Id"><i class="fas fa-trash-alt"></i> Delete</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(to right, #f2fcfe, #1c92d2);
+        transition: all 0.5s ease;
+    }
+
+        body.dark-mode {
+            background: #1e1e2f;
+            color: white;
+        }
+
+    h1 {
+        text-align: center;
+        font-weight: bold;
+        margin-bottom: 20px;
+    }
+
+    .table-wrapper {
+        overflow-x: auto;
+    }
+
+    .table-scroll {
+        max-height: 400px;
+        overflow-y: auto;
+        border-radius: 12px;
+    }
+
+    table.table {
+        width: 100%;
+        border-collapse: collapse;
+        background-color: white;
+        box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+    }
+
+    body.dark-mode .table {
+        background: linear-gradient(to right, #2f2f4f, #1c92d2);
+        color: white;
+    }
+
+    .table th, .table td {
+        padding: 12px 16px;
+        text-align: left;
+        vertical-align: middle;
+    }
+
+    .table tbody tr:nth-child(even) {
+        background-color: #fdf3e7;
+    }
+
+    .table tbody tr:nth-child(odd) {
+        background-color: #fff0f5;
+    }
+
+    .table tbody tr:hover {
+        background-color: #ffe3e3;
+        transform: scale(1.01);
+        box-shadow: 0 0 12px rgba(255, 126, 95, 0.2);
+        transition: all 0.3s ease-in-out;
+    }
+
+    body.dark-mode .table tbody tr:nth-child(even) {
+        background-color: #2f2f4f;
+    }
+
+    body.dark-mode .table tbody tr:nth-child(odd) {
+        background-color: #252538;
+    }
+
+    body.dark-mode .table tbody tr:hover {
+        background-color: #3e3e5e;
+    }
+
+    a {
+        text-decoration: none;
+        padding: 6px 12px;
+        border-radius: 5px;
+        font-weight: bold;
+        margin-right: 5px;
+        transition: all 0.3s ease;
+    }
+
+        a[href*="Edit"] {
+            background-color: #ffc107;
+            color: #212529;
+        }
+
+        a[href*="Details"] {
+            background-color: #17a2b8;
+            color: white;
+        }
+
+        a[href*="Delete"] {
+            background-color: #dc3545;
+            color: white;
+        }
+
+        a:hover {
+            transform: scale(1.05);
+        }
+
+        a[href*="Create"] {
+            background-color: #28a745;
+            color: white;
+            font-weight: bold;
+            padding: 10px 20px;
+            border-radius: 6px;
+            transition: 0.3s;
+            display: inline-block;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+            a[href*="Create"]:hover {
+                background-color: #218838;
+                transform: scale(1.05);
+            }
+
+    .switch {
+        position: relative;
+        display: inline-block;
+        width: 50px;
+        height: 25px;
+    }
+
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+    .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: .4s;
+        border-radius: 34px;
+    }
+
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 2.5px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+    input:checked + .slider {
+        background-color: #2196F3;
+    }
+
+        input:checked + .slider:before {
+            transform: translateX(24px);
+        }
+</style>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+
+<script>
+    document.getElementById("modeToggle").addEventListener("change", function () {
+        document.body.classList.toggle("dark-mode");
+    });
+
+    document.getElementById("searchInput").addEventListener("keyup", function () {
+        const filter = this.value.toLowerCase();
+        const rows = document.querySelectorAll(".table tbody tr");
+        rows.forEach(row => {
+            const name = row.children[1].textContent.toLowerCase();
+            const id = row.children[0].textContent.toLowerCase();
+            const department = row.children[4].textContent.toLowerCase();
+            row.style.display = name.includes(filter) || id.includes(filter) || department.includes(filter) ? "" : "none";
+        });
+    });
+
+    function showDownloadOptions() {
+        document.getElementById("downloadModal").style.display = "block";
+        document.getElementById("modalOverlay").style.display = "block";
+    }
+
+    function closeDownloadOptions() {
+        document.getElementById("downloadModal").style.display = "none";
+        document.getElementById("modalOverlay").style.display = "none";
+    }
+
+    function downloadCSV() {
+        let csvContent = "data:text/csv;charset=utf-8,";
+        csvContent += "Id,Name,Email,DepartmentId,DepartmentName\n";
+        const rows = document.querySelectorAll(".table tbody tr");
+        rows.forEach(row => {
+            if (row.style.display !== "none") {
+                const cells = row.querySelectorAll("td");
+                const rowData = Array.from(cells).slice(0, 5).map(td => "${td.textContent.trim()}").join(",");
+                csvContent += rowData + "\n";
+            }
+        });
+        const link = document.createElement("a");
+        link.setAttribute("href", encodeURI(csvContent));
+        link.setAttribute("download", "employee_list.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        closeDownloadOptions();
+    }
+
+    function downloadExcel() {
+        const wb = XLSX.utils.book_new();
+        const ws_data = [["Id", "Name", "Email", "DepartmentId", "DepartmentName"]];
+        const rows = document.querySelectorAll(".table tbody tr");
+        rows.forEach(row => {
+            if (row.style.display !== "none") {
+                const cells = row.querySelectorAll("td");
+                const rowData = Array.from(cells).slice(0, 5).map(td => td.textContent.trim());
+                ws_data.push(rowData);
+            }
+        });
+        const ws = XLSX.utils.aoa_to_sheet(ws_data);
+        XLSX.utils.book_append_sheet(wb, ws, "Employees");
+        XLSX.writeFile(wb, "employee_list.xlsx");
+        closeDownloadOptions();
+    }
+
+    async function downloadPDF() {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        const headers = [["Id", "Name", "Email", "DepartmentId", "DepartmentName"]];
+        const data = [];
+        const rows = document.querySelectorAll(".table tbody tr");
+        rows.forEach(row => {
+            if (row.style.display !== "none") {
+                const cells = row.querySelectorAll("td");
+                const rowData = Array.from(cells).slice(0, 5).map(td => td.textContent.trim());
+                data.push(rowData);
+            }
+        });
+        doc.autoTable({
+            head: headers,
+            body: data
+        });
+        doc.save("employee_list.pdf");
+        closeDownloadOptions();
+    }
+
+
+
+
+
+
+    //<script>
+    function openMailModal() {
+        document.getElementById("mailModal").style.display = "block";
+        document.getElementById("mailOverlay").style.display = "block";
+    }
+
+    function closeMailModal() {
+        document.getElementById("mailModal").style.display = "none";
+        document.getElementById("mailOverlay").style.display = "none";
+    }
+
+    function toggleDropdown(value) {
+        document.getElementById("employeeSelect").style.display = value === "individual" ? "block" : "none";
+        document.getElementById("departmentSelect").style.display = value === "department" ? "block" : "none";
+
+        let form = document.getElementById("mailForm");
+        if (value === "individual") form.action = "/Employee/SendMailToOne";
+        else if (value === "department") form.action = "/Employee/SendMailToDepartment";
+        else form.action = "/Employee/SendMailToAll";
+    }
+</script>
+
+

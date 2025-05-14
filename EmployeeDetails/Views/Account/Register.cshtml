@@ -1,0 +1,89 @@
+﻿@{
+    Layout = "~/Views/Shared/_Layout.cshtml";
+}
+
+<style>
+    body {
+        font-family: 'Poppins', sans-serif;
+        margin: 0;
+        padding: 0;
+        background: linear-gradient(135deg, #ff9a9e, #fad0c4, #f6c5b9);
+        background-size: cover;
+        height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        color: #333;
+        transition: all 0.3s ease-in-out;
+    }
+
+    .register-container {
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 20px;
+        padding: 40px;
+        width: 400px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        backdrop-filter: blur(5px);
+        animation: slideIn 0.5s ease-out;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            background-color: #f0f0f0;
+            font-size: 16px;
+        }
+
+        .form-group button {
+            width: 100%;
+            padding: 12px;
+            background-color: #00cec9;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+            .form-group button:hover {
+                background-color: #00b3b0;
+            }
+
+    /* Fade-in effect for form */
+   
+        
+
+    {
+        opacity: 0;
+        transform: translateY(-30px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+
+    }
+</style>
+
+<div class="register-container">
+    <h2>Register</h2>
+    <form method="post" asp-action="Register" asp-controller="Account">
+        <div class="form-group">
+            <input type="email" name="Email" class="form-control" placeholder="Email" required />
+        </div>
+        <div class="form-group">
+            <input type="password" name="Password" class="form-control" placeholder="Password" required />
+        </div>
+        <div class="form-group">
+            <button type="submit">Register</button>
+        </div>
+    </form>
+</div>
